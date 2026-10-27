@@ -65,11 +65,15 @@
     ],
     "extra": {
       "supportsRTL": true,
-      "forcesRTL": true
+      "forcesRTL": true,
+      "eas": {
+        "projectId": "ff34fff2-4abf-4cd2-a616-3d6ae7b3731c"
+      }
     },
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "owner": "orelchalfon"
   }
 }

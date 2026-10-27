@@ -1,10 +1,12 @@
 // Public, build-time configuration. Every EXPO_PUBLIC_* value is inlined into the app
 // bundle and visible to anyone holding the binary — never put secrets here (no
 // service-role key, no ElevenLabs key: those live only in Supabase Edge Function secrets).
+// Local runs read .env (gitignored, so EAS never sees it); EAS builds read the same values
+// from the project's EAS environment variables (development / preview / production).
 
 function required(name: string, value: string | undefined): string {
   if (!value) {
-    throw new Error(`Missing ${name}. Copy .env.example to .env and fill it in.`);
+    throw new Error(`Missing ${name}. Local: copy .env.example to .env. EAS: eas env:create ${name}.`);
   }
   return value;
 }

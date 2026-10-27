@@ -13,11 +13,15 @@ cp .env.example .env        # fill in the public Supabase URL + publishable key
 
 | Variable | Where | Notes |
 |---|---|---|
-| `EXPO_PUBLIC_SUPABASE_URL` | `.env` | public, ships in the bundle |
-| `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `.env` | anon/publishable key, public |
-| `EXPO_PUBLIC_WEB_ORIGIN` | `.env` | web app origin for gift QR links + auth emails (default `https://kasp-web.kasp.workers.dev`) |
+| `EXPO_PUBLIC_SUPABASE_URL` | `.env` + EAS env vars | public, ships in the bundle |
+| `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `.env` + EAS env vars (sensitive) | anon/publishable key, public |
+| `EXPO_PUBLIC_WEB_ORIGIN` | `.env` + EAS env vars | web app origin for gift QR links + auth emails (default `https://kasp-web.kasp.workers.dev`) |
 | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | `.env.test` (or `../kaspii-web/.env`) | **integration tests only**, never `EXPO_PUBLIC_*` |
 | `ELEVENLABS_API_KEY`, `ELEVENLABS_AGENT_ID` | Supabase Edge Function secrets | never in the app |
+
+EAS builds don't see `.env` (gitignored). The three `EXPO_PUBLIC_*` values are EAS environment
+variables on `@orelchalfon/kasp-mobile` in `development`, `preview` and `production`
+(`eas env:list <environment>`); the build profile picks the environment automatically.
 
 Supabase is a cloud URL, so a physical phone reaches it directly (no `localhost`).
 
