@@ -46,3 +46,6 @@ app-example
 .env
 .env.test
 .pnpm-store/
+
+# Git Bash (MSYS2) crash dumps
+*.stackdump

@@ -71,4 +71,6 @@ the existing SECURITY DEFINER RPCs; mutations never auto-retry or queue offline
 `tsc`/ESLint here, check with `deno check`), deployed to
 `jlpvjxywfvijntsctvaq` with `verify_jwt` off: the project uses the new publishable/secret API
 keys, which the platform JWT check does not support, so each function authenticates the caller
-itself (`auth.getUser`, 401 otherwise). Redeploy after editing `_shared/` too.
+itself (`auth.getUser`, 401 otherwise). Redeploy after editing `_shared/` too, from this folder:
+`supabase functions deploy <name> --project-ref jlpvjxywfvijntsctvaq --no-verify-jwt` (without
+`--no-verify-jwt` the CLI turns JWT verification back on and every call fails).
