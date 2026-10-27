@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { View } from "react-native";
 
 import { ChildAvatar } from "@/components/child-avatar";
@@ -116,7 +116,10 @@ function GiftForm({ token, childName, defaultSender }: { token: string; childNam
   const [error, setError] = useState<string | null>(null);
   const [sentAmount, setSentAmount] = useState<number | null>(null);
   // One id per gift: a double tap or a retry of the same gift is deduplicated server-side.
-  const [requestId, setRequestId] = useState(newGiftRequestId);
+  // The id is tied to what was sent: submit_gift returns the existing gift for a known id,
+  // so reusing it after the sender changed the amount/reason/name would report the new
+  // amount while the parent sees the old one. A changed gift gets a fresh id.
+  const attemptRef = useRef<{ key: string; id: string } | null>(null);
 
   const n = /^\s*\d+\s*$/.test(amountInput) ? Number(amountInput) : NaN;
   const amount = Number.isInteger(n) && n >= 1 && n <= GIFT_MAX ? n : null;
@@ -136,8 +139,11 @@ function GiftForm({ token, childName, defaultSender }: { token: string; childNam
       confirmLabel: "שליחה",
     });
     if (!ok) return;
+    const name = senderName.trim();
+    const key = JSON.stringify([amount, reason, name]);
+    if (attemptRef.current?.key !== key) attemptRef.current = { key, id: newGiftRequestId() };
     try {
-      await submit.mutateAsync({ token, amount, reason, senderName: senderName.trim(), requestId });
+      await submit.mutateAsync({ token, amount, reason, senderName: name, requestId: attemptRef.current.id });
       setSentAmount(amount);
     } catch (e) {
       setError(giftErrorMessage(e instanceof RpcError ? e.reason : ""));
@@ -162,7 +168,7 @@ function GiftForm({ token, childName, defaultSender }: { token: string; childNam
             setSentAmount(null);
             setAmountInput("");
             setReason(null);
-            setRequestId(newGiftRequestId());
+            attemptRef.current = null;
           }}
         />
       </Card>

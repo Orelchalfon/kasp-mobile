@@ -2,6 +2,7 @@
 // tasks.$taskId,wallet}.tsx. Balances are derived from the child's own ledger by type.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { fetchAllRows, fetchByIds } from "@/lib/paging";
 import { hhKey, qk } from "@/lib/query-keys";
 import { mustList, RpcError } from "@/lib/rpc";
 import { supabase } from "@/lib/supabase";
@@ -20,7 +21,15 @@ export function useChildHome(hh: string, childId: string) {
     queryKey: qk.childHome(hh, childId),
     queryFn: async () => {
       const [tx, tasks] = await Promise.all([
-        supabase.from("transactions").select("amount, type").eq("child_id", childId).then(mustList),
+        fetchAllRows((from, to) =>
+          supabase
+            .from("transactions")
+            .select("id, amount, type", { count: "exact" })
+            .eq("child_id", childId)
+            .order("created_at", { ascending: false })
+            .order("id", { ascending: false })
+            .range(from, to),
+        ),
         supabase
           .from("tasks")
           .select("id, title, reward_amount, status, created_at")
@@ -51,19 +60,23 @@ export function useChildLedger(hh: string, childId: string) {
   return useQuery({
     queryKey: qk.childLedger(hh, childId),
     queryFn: async () => {
-      const rows = mustList(
-        await supabase
+      const rows = await fetchAllRows((from, to) =>
+        supabase
           .from("transactions")
-          .select("id, amount, type, reference_task_id, reference_gift_id, goal_id, created_at")
+          .select("id, amount, type, reference_task_id, reference_gift_id, goal_id, created_at", { count: "exact" })
           .eq("child_id", childId)
-          .order("created_at", { ascending: false }),
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to),
       );
       const uniq = (xs: (string | null)[]) => [...new Set(xs.filter((x): x is string => !!x))];
-      const taskIds = uniq(rows.map((r) => r.reference_task_id));
-      const goalIds = uniq(rows.map((r) => r.goal_id));
       const [tasks, goals] = await Promise.all([
-        taskIds.length ? supabase.from("tasks").select("id, title").in("id", taskIds).then(mustList) : [],
-        goalIds.length ? supabase.from("goals").select("id, title").in("id", goalIds).then(mustList) : [],
+        fetchByIds(uniq(rows.map((r) => r.reference_task_id)), (ids) =>
+          supabase.from("tasks").select("id, title").in("id", ids).then(mustList),
+        ),
+        fetchByIds(uniq(rows.map((r) => r.goal_id)), (ids) =>
+          supabase.from("goals").select("id, title").in("id", ids).then(mustList),
+        ),
       ]);
       return {
         rows: rows as ChildLedgerRow[],

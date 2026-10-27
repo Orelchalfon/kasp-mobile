@@ -99,18 +99,26 @@ function VoiceCallInner({ tutor, childId, householdId }: { tutor: TutorRow; chil
     if (isSpeaking || phase !== "active") setIsThinking(false);
   }, [isSpeaking, phase]);
 
-  // Hang up if the screen is closed mid-call.
+  // Hang up if the screen is closed mid-call, and let a startCall still in flight (permission
+  // prompt, session insert + token, startSession) see that it must stop instead of
+  // connecting a microphone with no screen left to hang up from.
+  const unmountedRef = useRef(false);
+  const conversationRef = useRef(conversation);
+  conversationRef.current = conversation;
   useEffect(() => {
+    unmountedRef.current = false;
     return () => {
-      if (sessionIdRef.current) void conversation.endSession();
+      unmountedRef.current = true;
+      if (sessionIdRef.current) void conversationRef.current.endSession();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const startCall = async () => {
     setMicDenied(false);
     setPhase("connecting");
-    if (!(await ensureMicPermission())) {
+    const micGranted = await ensureMicPermission();
+    if (unmountedRef.current) return;
+    if (!micGranted) {
       setMicDenied(true);
       setPhase("idle");
       return;
@@ -127,6 +135,11 @@ function VoiceCallInner({ tutor, childId, householdId }: { tutor: TutorRow; chil
     ]);
     const created = insertResult.status === "fulfilled" ? insertResult.value.data : null;
     if (created) sessionIdRef.current = created.id;
+    if (unmountedRef.current) {
+      // Closed while connecting: never start the call, and don't leave the row 'active'.
+      await finishSession("failed");
+      return;
+    }
     if (!created || tokenResult.status === "rejected") {
       if (created) await finishSession("failed");
       const reason =
@@ -141,6 +154,9 @@ function VoiceCallInner({ tutor, childId, householdId }: { tutor: TutorRow; chil
         connectionType: "webrtc",
         overrides: tokenResult.value.overrides,
       });
+      // Closed while startSession was connecting: the unmount cleanup may have run too early
+      // to stop it, so hang up now (onDisconnect then closes the session row).
+      if (unmountedRef.current) void conversationRef.current.endSession();
     } catch {
       await finishSession("failed");
       toast.error("לא הצלחנו להתחיל את השיחה. נסו שוב.");

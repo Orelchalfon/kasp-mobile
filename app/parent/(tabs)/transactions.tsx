@@ -13,6 +13,7 @@ import { Text } from "@/components/ui/text";
 import { colors } from "@/constants/theme";
 import { MonthlySummary } from "@/features/parent/monthly-summary";
 import { useChildBalances, useHouseholdTransactions } from "@/features/parent/transactions-api";
+import { uniqueById } from "@/lib/paging";
 import { useParentAuth } from "@/providers/auth-provider";
 
 const ALL = "all";
@@ -24,7 +25,7 @@ export default function ParentTransactions() {
   const children = useChildBalances(householdId);
   const tx = useHouseholdTransactions(householdId, childId);
 
-  const rows = useMemo(() => tx.data?.pages.flatMap((p) => p.rows) ?? [], [tx.data]);
+  const rows = useMemo(() => uniqueById(tx.data?.pages.flatMap((p) => p.rows) ?? []), [tx.data]);
   const lookups = useMemo(() => {
     const merged = { taskTitles: {} as Record<string, string>, goalTitles: {} as Record<string, string>, giftSenders: {} as Record<string, string> };
     for (const p of tx.data?.pages ?? []) {

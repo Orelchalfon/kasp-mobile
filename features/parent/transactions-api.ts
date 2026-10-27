@@ -46,13 +46,19 @@ async function fetchTitles(rows: HouseholdTx[]) {
   };
 }
 
-/** One page: PAGE_SIZE + 1 rows to learn whether another page exists. */
+/**
+ * One page: PAGE_SIZE + 1 rows to learn whether another page exists. `id` breaks ties:
+ * the 2-3 rows one RPC writes share created_at, so without it their order (and the page
+ * split) can change between requests. A row inserted between pages shifts the offsets and
+ * repeats a row on the next page; the screen drops it with uniqueById.
+ */
 export async function fetchTxPage(hh: string, childId: string | null, offset: number): Promise<TxPage> {
   let query = supabase
     .from("transactions")
     .select("id, child_id, amount, type, reference_task_id, reference_gift_id, goal_id, created_at")
     .eq("household_id", hh)
     .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
     .range(offset, offset + PAGE_SIZE);
   if (childId) query = query.eq("child_id", childId);
   const rows = mustList(await query);

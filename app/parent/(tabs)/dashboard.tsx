@@ -15,6 +15,7 @@ import {
   approveGift,
   approveTask,
   rejectGift,
+  RECENT_TX_LIMIT,
   rejectTask,
   useDashboard,
   useDashboardDerived,
@@ -25,8 +26,6 @@ import { giftErrorMessage } from "@/lib/gifts";
 import { RpcError } from "@/lib/rpc";
 import { isWalletTx } from "@/lib/transactions";
 import { useParentAuth } from "@/providers/auth-provider";
-
-const RECENT_TX_LIMIT = 20;
 
 export default function ParentDashboard() {
   const { householdId } = useParentAuth();

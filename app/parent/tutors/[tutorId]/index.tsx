@@ -22,6 +22,7 @@ import {
 } from "@/features/tutors/api";
 import { TutorFields } from "@/features/tutors/tutor-form";
 import { formatDate } from "@/lib/format";
+import { uniqueById } from "@/lib/paging";
 import { useParentAuth } from "@/providers/auth-provider";
 
 const SESSION_STATUS: Record<SessionRow["status"], { label: string; icon: "radio" | "check-circle" | "x-circle"; color: string }> = {
@@ -108,7 +109,7 @@ function TutorEditor({ householdId, saved }: { householdId: string; saved: Tutor
     }
   };
 
-  const sessionRows = sessions.data?.pages.flatMap((p) => p.rows) ?? [];
+  const sessionRows = uniqueById(sessions.data?.pages.flatMap((p) => p.rows) ?? []);
   const names = Object.assign({}, ...(sessions.data?.pages.map((p) => p.names) ?? [])) as Record<string, string>;
 
   return (

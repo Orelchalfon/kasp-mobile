@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import type { GoalFormValues } from "@/features/savings/goal-schema";
+import { fetchAllRows } from "@/lib/paging";
 import { hhKey, qk } from "@/lib/query-keys";
 import { must, mustList, RpcError, unwrapJson } from "@/lib/rpc";
 import { supabase } from "@/lib/supabase";
@@ -38,6 +39,8 @@ export interface SavingsTx {
   created_at: string | null;
 }
 
+const RECENT_SAVINGS_LIMIT = 5;
+
 export const periodLabel: Record<CyclePeriod, string> = { day: "יום", week: "שבוע", month: "חודש" };
 export const sourceFromLabel: Record<DepositSource, string> = { wallet: "מהארנק", savings: "מהחיסכון" };
 
@@ -51,17 +54,26 @@ async function fetchSavings(hh: string, childId: string) {
       .eq("child_id", childId)
       .order("created_at", { ascending: false })
       .then(mustList),
-    supabase
-      .from("transactions")
-      .select("id, amount, type, goal_id, reference_task_id, reference_gift_id, created_at")
-      .eq("child_id", childId)
-      .order("created_at", { ascending: false })
-      .then(mustList),
+    // Every row: wallet, savings and per-goal balances are summed from it.
+    fetchAllRows((from, to) =>
+      supabase
+        .from("transactions")
+        .select("id, amount, type, goal_id, reference_task_id, reference_gift_id, created_at", { count: "exact" })
+        .eq("child_id", childId)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(from, to),
+    ),
     supabase.from("household_settings").select("savings_percentage").eq("household_id", hh).maybeSingle().then(must),
   ]);
+  // Titles only for the savings rows the screen lists (see recentSavings).
   const taskIds = [
     ...new Set(
-      txs.filter((t) => t.type === "savings_credit" && t.reference_task_id).map((t) => t.reference_task_id as string),
+      txs
+        .filter((t) => t.type === "savings_credit")
+        .slice(0, RECENT_SAVINGS_LIMIT)
+        .map((t) => t.reference_task_id)
+        .filter((x): x is string => !!x),
     ),
   ];
   const taskTitles: Record<string, string> = {};
@@ -87,7 +99,7 @@ export function useSavings(hh: string, childId: string) {
       walletBalance: computeWalletBalance(txs),
       savingsBalance: computeSavingsBalance(txs),
       depositedByGoal: computeGoalDeposits(txs),
-      recentSavings: txs.filter((t) => t.type === "savings_credit").slice(0, 5),
+      recentSavings: txs.filter((t) => t.type === "savings_credit").slice(0, RECENT_SAVINGS_LIMIT),
       goalTitles: Object.fromEntries(goals.map((g) => [g.id, g.title])) as Record<string, string>,
     };
   }, [query.data]);

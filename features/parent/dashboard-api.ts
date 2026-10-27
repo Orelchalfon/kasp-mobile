@@ -5,6 +5,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 
+import { fetchAllRows, fetchByIds } from "@/lib/paging";
 import { isQuizSubject, type QuizSubject } from "@/lib/quiz-bank";
 import { hhKey, qk } from "@/lib/query-keys";
 import { must, mustList, RpcError, unwrapJson } from "@/lib/rpc";
@@ -68,6 +69,9 @@ export function parseSettings(
   };
 }
 
+/** Wallet rows shown per child on the dashboard; task titles are only fetched for these. */
+export const RECENT_TX_LIMIT = 20;
+
 export async function fetchDashboard(hh: string): Promise<DashboardData> {
   const [children, ledger, tasks, settings, gifts] = await Promise.all([
     supabase
@@ -76,12 +80,18 @@ export async function fetchDashboard(hh: string): Promise<DashboardData> {
       .eq("household_id", hh)
       .order("display_name", { ascending: true })
       .then(mustList),
-    supabase
-      .from("transactions")
-      .select("id, child_id, amount, reference_task_id, reference_gift_id, goal_id, created_at, type")
-      .eq("household_id", hh)
-      .order("created_at", { ascending: false })
-      .then(mustList),
+    // Every row: balances are summed from the ledger, so a capped read would be wrong.
+    fetchAllRows((from, to) =>
+      supabase
+        .from("transactions")
+        .select("id, child_id, amount, reference_task_id, reference_gift_id, goal_id, created_at, type", {
+          count: "exact",
+        })
+        .eq("household_id", hh)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(from, to),
+    ),
     supabase
       .from("tasks")
       .select("id, title, reward_amount, status, child_id, created_at")
@@ -104,14 +114,18 @@ export async function fetchDashboard(hh: string): Promise<DashboardData> {
       .then(mustList),
   ]);
 
-  const taskIds = Array.from(
-    new Set(ledger.map((t) => t.reference_task_id).filter((x): x is string => !!x)),
-  );
-  const taskTitles: Record<string, string> = {};
-  if (taskIds.length > 0) {
-    const rows = await supabase.from("tasks").select("id, title").in("id", taskIds).then(mustList);
-    for (const t of rows) taskTitles[t.id] = t.title;
+  const shown: Record<string, number> = {};
+  const taskIds = new Set<string>();
+  for (const t of ledger) {
+    if (!isWalletTx(t.type) || (shown[t.child_id] ?? 0) >= RECENT_TX_LIMIT) continue;
+    shown[t.child_id] = (shown[t.child_id] ?? 0) + 1;
+    if (t.reference_task_id) taskIds.add(t.reference_task_id);
   }
+  const taskTitles: Record<string, string> = {};
+  const titleRows = await fetchByIds([...taskIds], (ids) =>
+    supabase.from("tasks").select("id, title").in("id", ids).then(mustList),
+  );
+  for (const t of titleRows) taskTitles[t.id] = t.title;
 
   return {
     children,

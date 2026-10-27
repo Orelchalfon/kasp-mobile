@@ -114,6 +114,7 @@ export function useTutorSessions(hh: string, tutorId: string) {
           .select("id, child_id, started_at, ended_at, status")
           .eq("tutor_id", tutorId)
           .order("started_at", { ascending: false })
+          .order("id", { ascending: false })
           .range(pageParam, pageParam + SESSIONS_PAGE),
       ) as SessionRow[];
       const page = rows.slice(0, SESSIONS_PAGE);
