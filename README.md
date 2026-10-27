@@ -1,50 +1,74 @@
-# Welcome to your Expo app 👋
+# Kasp mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Hebrew-first (RTL) Expo app for Kasp — the native counterpart of `../kaspii-web`, on the same
+Supabase backend (`jlpvjxywfvijntsctvaq`). Expo SDK 54 · Expo Router · NativeWind 5 RC ·
+TanStack Query · pnpm. Feature map and verification status: [`migration-progress.md`](./migration-progress.md).
 
-## Get started
-
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Setup
 
 ```bash
-npm run reset-project
+pnpm install
+cp .env.example .env        # fill in the public Supabase URL + publishable key
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+| Variable | Where | Notes |
+|---|---|---|
+| `EXPO_PUBLIC_SUPABASE_URL` | `.env` | public, ships in the bundle |
+| `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `.env` | anon/publishable key, public |
+| `EXPO_PUBLIC_WEB_ORIGIN` | `.env` | web app origin for gift QR links + auth emails (default `https://kasp-web.kasp.workers.dev`) |
+| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | `.env.test` (or `../kaspii-web/.env`) | **integration tests only**, never `EXPO_PUBLIC_*` |
+| `ELEVENLABS_API_KEY`, `ELEVENLABS_AGENT_ID` | Supabase Edge Function secrets | never in the app |
 
-## Learn more
+Supabase is a cloud URL, so a physical phone reaches it directly (no `localhost`).
 
-To learn more about developing your project with Expo, look at the following resources:
+## Run
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+pnpm start                  # Expo Go (--go): scan the QR (phone and PC on the same network)
+pnpm android                # Expo Go on a connected Android device / emulator
+pnpm start:dev              # serve a development build instead (--dev-client)
+```
 
-## Join the community
+Everything runs in **Expo Go** except the AI-tutor **voice call**, which needs LiveKit/WebRTC
+native modules (`@elevenlabs/react-native`, `@livekit/react-native`, `@livekit/react-native-webrtc`).
+Because `expo-dev-client` is installed, plain `expo start` defaults to development-build mode —
+the scripts pass `--go` explicitly. For the voice call, use a development build (not yet compiled
+or tested — `@livekit/react-native-webrtc` 144.x on RN 0.81 / new architecture is unverified):
 
-Join our community of developers creating universal apps.
+```bash
+pnpm build:android:dev      # = expo run:android: local dev build (Android SDK + JDK 17), installs on the device
+# or in the cloud / locally with EAS (eas.json "development" profile):
+pnpm dlx eas-cli build --profile development --platform android [--local]
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## RTL
+
+The app is Hebrew-only and always right-to-left:
+- builds: `expo-localization` plugin with `supportsRTL` + `forcesRTL` (changing it needs a rebuild);
+- Expo Go: `extra.supportsRTL/forcesRTL` in `app.json`, plus `I18nManager.forceRTL` at startup.
+
+Use logical classes (`ps-/pe-/ms-/me-/start-/end-`, `text-start`) — never left/right. LTR
+fragments (emails, links, signed amounts) go through `LtrText`, which wraps strings in Unicode
+LRI/PDI because Android ignores `writingDirection`.
+
+## Checks
+
+```bash
+pnpm typecheck
+pnpm lint
+pnpm test                   # unit, no network
+pnpm test:integration       # LIVE Supabase: creates ad-hoc users and purges them
+pnpm dlx expo-doctor
+```
+
+## Backend contract
+
+Supabase only; no schema / RLS / RPC changes from this app. Money moves go exclusively through
+the existing SECURITY DEFINER RPCs; mutations never auto-retry or queue offline
+(`lib/query-client.ts`). Wallet = `task_reward + manual_adjustment + wallet_debit + quiz_reward`
+(`lib/transactions.ts`). Server-only features use Supabase Edge Functions in
+`supabase/functions` (`create-child`, `tutor-token`, `tutor-transcript`, Deno; excluded from
+`tsc`/ESLint here, check with `deno check`), deployed to
+`jlpvjxywfvijntsctvaq` with `verify_jwt` off: the project uses the new publishable/secret API
+keys, which the platform JWT check does not support, so each function authenticates the caller
+itself (`auth.getUser`, 401 otherwise). Redeploy after editing `_shared/` too.

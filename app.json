@@ -1,25 +1,32 @@
 {
   "expo": {
-    "name": "kasp-mobile",
+    "name": "Kasp",
     "slug": "kasp-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "kasp-mobile",
-    "userInterfaceStyle": "automatic",
+    "scheme": "kasp",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kasp.mobile",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Kasp משתמשת במיקרופון כדי שתוכלו לדבר עם החונך."
+      }
     },
     "android": {
+      "package": "com.kasp.mobile",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#F6F5F1",
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "web": {
       "output": "static",
@@ -33,13 +40,33 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-localization",
+        {
+          "supportsRTL": true,
+          "forcesRTL": true,
+          "supportedLocales": [
+            "he"
+          ]
+        }
+      ],
+      "expo-secure-store",
+      "@react-native-community/datetimepicker",
+      "@livekit/react-native-expo-plugin",
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "microphonePermission": "Kasp משתמשת במיקרופון כדי שתוכלו לדבר עם החונך."
         }
       ]
     ],
+    "extra": {
+      "supportsRTL": true,
+      "forcesRTL": true
+    },
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
