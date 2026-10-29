@@ -1,12 +1,13 @@
 import { Feather } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 
+import { LiquidTabBar } from "@/components/liquid-tab-bar";
 import { tabScreenOptions } from "@/components/tab-bar";
 
 // Same order as the web child nav: ראשי → לימוד → חונך → חיסכון → ארנק.
 export default function ChildTabs() {
   return (
-    <Tabs screenOptions={tabScreenOptions}>
+    <Tabs screenOptions={tabScreenOptions} tabBar={(props) => <LiquidTabBar {...props} />}>
       <Tabs.Screen
         name="dashboard"
         options={{ title: "ראשי", tabBarIcon: ({ color, size }) => <Feather name="home" color={color} size={size} /> }}
