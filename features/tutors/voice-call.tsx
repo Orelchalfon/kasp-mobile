@@ -239,9 +239,7 @@ function VoiceCallInner({ tutor, childId, householdId }: { tutor: TutorRow; chil
           </View>
         ) : (
           <View className="gap-2">
-            <Text variant="caption" className="text-center">
-              השיחה הסתיימה.
-            </Text>
+            <Button title="שיחה חדשה" icon="phone" onPress={startCall} />
             <Button title="חזרה לחונכים" variant="outline" onPress={() => router.back()} />
           </View>
         )}

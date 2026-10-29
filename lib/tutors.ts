@@ -32,10 +32,9 @@ export interface TutorVoiceOption {
   gender: "male" | "female";
 }
 
-// Placeholder ids — replace with real Hebrew-capable ElevenLabs voice ids
-// from the user's voice library before this feature goes live. These
-// deliberately do not look like real ElevenLabs ids so they can't be
-// mistaken for working ones.
+// ElevenLabs voice ids. אבי is the household's cloned voice and also the mobile agent's default
+// voice. A tutor row stores its voice_id at creation and tutor-token sends it as a tts override,
+// so changing an id here does not move existing tutors — update their rows too.
 export const TUTOR_VOICES: readonly TutorVoiceOption[] = [
   { id: "1iMrKawcpjxEwLgPzaO4", label: "אבי", gender: "male" },
   { id: "Lzv0WyyKupOrbKO120f8", label: "נועה", gender: "female" },

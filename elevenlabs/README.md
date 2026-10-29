@@ -35,6 +35,18 @@ aloud verbatim (no LLM, so no guardrail on it). If that matters, make the first 
 The prompt-injection guardrail did not react to variable content on its own — only once the
 child's turn followed it.
 
+## Deploying and voices
+
+`tutor-token` bundles `supabase/functions/_shared/tutors.ts`, so redeploy it whenever that file
+changes (`supabase functions deploy tutor-token --project-ref jlpvjxywfvijntsctvaq --no-verify-jwt`).
+On 2026-10-29 the agent secret already pointed at this agent while the deployed function still sent
+prompt/first-message overrides, and every call failed with "Override for field 'first_message' is
+not allowed by config".
+
+The agent's default voice is the household's cloned voice (אבי in `lib/tutors.ts`), but each tutor
+row's `voice_id` is sent as a `tts.voiceId` override and wins. Changing a voice id in the catalog
+does not update existing tutors; their rows must be updated as well.
+
 Changing the prompt: edit `tutor-agent-prompt.md`, then apply it to the agent (dashboard, or
 `PATCH /v1/convai/agents/{id}` with `conversation_config.agent.prompt.prompt`). A variable added to
 the prompt must also be added to `buildTutorDynamicVariables` and to the placeholders.
