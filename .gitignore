@@ -41,3 +41,14 @@ app-example
 # generated native folders
 /ios
 /android
+
+# local env + pnpm store
+.env
+.env.test
+.pnpm-store/
+
+# Git Bash (MSYS2) crash dumps
+*.stackdump
+
+# supabase cli cache
+supabase/.temp/
