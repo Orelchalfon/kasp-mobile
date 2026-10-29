@@ -27,23 +27,48 @@ Supabase is a cloud URL, so a physical phone reaches it directly (no `localhost`
 
 ## Run
 
-```bash
-pnpm start                  # Expo Go (--go): scan the QR (phone and PC on the same network)
-pnpm android                # Expo Go on a connected Android device / emulator
-pnpm start:dev              # serve a development build instead (--dev-client)
-```
+There are two ways to run the app. Use **Expo Go** for everyday UI work. Use a **development
+build** (dev client) when you need the AI-tutor voice call.
 
-Everything runs in **Expo Go** except the AI-tutor **voice call**, which needs LiveKit/WebRTC
-native modules (`@elevenlabs/react-native`, `@livekit/react-native`, `@livekit/react-native-webrtc`).
-Because `expo-dev-client` is installed, plain `expo start` defaults to development-build mode —
-the scripts pass `--go` explicitly. For the voice call, use a development build (not yet compiled
-or tested — `@livekit/react-native-webrtc` 144.x on RN 0.81 / new architecture is unverified):
+### Expo Go (`pnpm start`)
 
 ```bash
-pnpm build:android:dev      # = expo run:android: local dev build (Android SDK + JDK 17), installs on the device
-# or in the cloud / locally with EAS (eas.json "development" profile):
-pnpm dlx eas-cli build --profile development --platform android [--local]
+pnpm start                  # expo start --go: Metro + QR code; scan it with the Expo Go app
+pnpm android                # same, and opens Expo Go on a connected Android device / emulator
+pnpm ios                    # same, for the iOS simulator (macOS only)
+pnpm web                    # browser preview
 ```
+
+Nothing to compile: install Expo Go from the store, keep the phone and PC on the same network,
+and scan the QR. Every screen works here **except the voice call**. Expo Go doesn't include the
+LiveKit/WebRTC native modules it needs (`@elevenlabs/react-native`, `@livekit/react-native`,
+`@livekit/react-native-webrtc`), so the tutor screen shows a message saying to open the development build instead.
+Because `expo-dev-client` is installed, a bare `expo start` would open in dev-client mode. That's
+why the scripts pass `--go`.
+
+### Development build / dev client (`pnpm start:dev`)
+
+```bash
+pnpm build:android:dev      # expo run:android: compiles the native app, installs it on the device, starts Metro
+pnpm start:dev              # expo start --dev-client: Metro only, for a dev build that's already installed
+```
+
+A development build is our own app compiled with all native modules plus the `expo-dev-client`
+launcher. Think of it as a custom Expo Go that also has WebRTC. Use it to test voice calls.
+
+- **First time, or after native changes:** run `pnpm build:android:dev`. It needs the Android
+  SDK, JDK 17 and a phone connected over USB (USB debugging on) or a running emulator. Rebuild
+  after adding or upgrading a package with native code, or after changing `app.json` plugins or
+  permissions.
+- **Every other day:** run `pnpm start:dev`, then open the **Kasp** app on the phone (not Expo
+  Go). It finds the dev server on the same network, or you can scan the QR. JS changes
+  hot-reload as usual.
+- **Without a local Android toolchain:** build it with EAS (the `eas.json` `development`
+  profile), install the APK it produces, then use `pnpm start:dev`:
+
+  ```bash
+  pnpm dlx eas-cli build --profile development --platform android   # add --local to build on this PC
+  ```
 
 ## RTL
 

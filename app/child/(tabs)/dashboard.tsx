@@ -19,7 +19,7 @@ export default function ChildDashboard() {
 
   return (
     <Screen refreshing={home.isRefetching} onRefresh={() => void home.refetch()}>
-      <View className="flex-row items-center justify-between">
+      <View className="flex-row-reverse items-center justify-end">
         <Text variant="title" accessibilityRole="header">
           ראשי
         </Text>

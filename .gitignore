@@ -49,3 +49,6 @@ app-example
 
 # Git Bash (MSYS2) crash dumps
 *.stackdump
+
+# supabase cli cache
+supabase/.temp/
