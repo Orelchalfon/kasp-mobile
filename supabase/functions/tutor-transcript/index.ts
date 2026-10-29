@@ -8,6 +8,8 @@ import { authenticate, CORS, json } from "../_shared/http.ts";
 
 const InputSchema = z.object({ sessionId: z.string().uuid() });
 
+type ElevenLabsStatus = "initiated" | "in-progress" | "processing" | "done" | "failed";
+
 interface ElevenLabsTranscriptTurn {
   role: "user" | "agent";
   message?: string | null;
@@ -54,13 +56,17 @@ Deno.serve(async (req) => {
     `https://api.elevenlabs.io/v1/convai/conversations/${encodeURIComponent(session.elevenlabs_conversation_id)}`,
     { headers: { "xi-api-key": apiKey } },
   );
-  // ElevenLabs may still be processing right after hang-up: fall back to the client save.
   if (!res.ok) return json({ transcript: saved });
 
-  const el = (await res.json()) as { transcript?: ElevenLabsTranscriptTurn[] };
+  const el = (await res.json()) as { status?: ElevenLabsStatus; transcript?: ElevenLabsTranscriptTurn[] };
   const transcript: TranscriptMessage[] = (el.transcript ?? [])
     .filter((t): t is ElevenLabsTranscriptTurn & { message: string } => !!t.message)
     .map((t) => ({ role: t.role === "agent" ? "assistant" : "user", content: t.message }));
+
+  // Only a finished ("done") record is final. While the call is live or ElevenLabs is still
+  // processing it, its transcript can be partial or empty; saving it would mark the row
+  // elevenlabs_api and permanently replace the client's full save. Serve the client save.
+  if (el.status !== "done" || transcript.length === 0) return json({ transcript: saved });
 
   await supabase
     .from("tutor_sessions")

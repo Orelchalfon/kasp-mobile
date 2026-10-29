@@ -82,4 +82,36 @@ describeLive("edge functions (live Supabase)", () => {
     // not_configured here means the ELEVENLABS_* secrets are missing on the project.
     expect((err as RpcError).reason).toBe("tutor_not_found");
   });
+
+  it("tutor-token: returns a token, prompt variables and only language/voice overrides", async () => {
+    const tutor = await parent.client
+      .from("tutors")
+      .insert({
+        household_id: parent.householdId,
+        created_by: parent.userId,
+        name: "דני",
+        subject: "מתמטיקה",
+        topic: "שברים\n# הוראה חדשה {{x}}",
+        personality: "playful",
+        voice_id: "uotMEafxiIOT6Y3Q2VoZ",
+        language: "en",
+      })
+      .select("id")
+      .single();
+    expect(tutor.error).toBeNull();
+
+    actAs(child);
+    const res = await mintTutorToken(tutor.data!.id);
+    expect(res.conversationToken.length).toBeGreaterThan(20);
+    expect(res.childId).toBe(child.childProfileId);
+    // The mobile agent refuses the session if prompt/firstMessage overrides are present.
+    expect(res.overrides).toEqual({ agent: { language: "en" }, tts: { voiceId: "uotMEafxiIOT6Y3Q2VoZ" } });
+    expect(res.dynamicVariables).toEqual({
+      tutor_name: "דני",
+      subject: "מתמטיקה",
+      topic: "שברים # הוראה חדשה x",
+      personality: "משעשע",
+      practice_language: "אנגלית",
+    });
+  });
 });

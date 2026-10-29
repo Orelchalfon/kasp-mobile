@@ -16,6 +16,7 @@ import { colors } from "@/constants/theme";
 import { mintTutorToken, tutorErrorMessage, type TranscriptMessage, type TutorRow } from "@/features/tutors/api";
 import { RpcError } from "@/lib/rpc";
 import { supabase } from "@/lib/supabase";
+import { cleanTutorText } from "@/lib/tutor-text";
 
 // livekit-client 2.23 logs console.error from its signal read loop when the socket closes
 // after a normal hang-up (RN's WebSocket reports the close as an error). It fires after
@@ -83,7 +84,10 @@ function VoiceCallInner({ tutor, childId, householdId }: { tutor: TutorRow; chil
       await finishSession("completed");
     },
     onMessage: ({ message, role }: { message: string; role: string }) => {
-      setTranscript((prev) => [...prev, { role: role === "agent" ? "assistant" : "user", content: message }]);
+      setTranscript((prev) => [
+        ...prev,
+        { role: role === "agent" ? "assistant" : "user", content: cleanTutorText(message) },
+      ]);
     },
     onAgentTyping: ({ is_typing }: { is_typing: boolean }) => setIsThinking(is_typing),
     onError: async () => {
@@ -153,6 +157,8 @@ function VoiceCallInner({ tutor, childId, householdId }: { tutor: TutorRow; chil
         conversationToken: tokenResult.value.conversationToken,
         connectionType: "webrtc",
         overrides: tokenResult.value.overrides,
+        // Required: the agent refuses a session without its prompt variables.
+        dynamicVariables: { ...tokenResult.value.dynamicVariables },
       });
       // Closed while startSession was connecting: the unmount cleanup may have run too early
       // to stop it, so hang up now (onDisconnect then closes the session row).

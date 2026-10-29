@@ -4,7 +4,7 @@
 import { z } from "npm:zod@3.25.76";
 
 import { authenticate, CORS, json } from "../_shared/http.ts";
-import { buildTutorOverrides, type TutorConfig } from "../_shared/tutors.ts";
+import { buildTutorDynamicVariables, buildTutorOverrides, type TutorConfig } from "../_shared/tutors.ts";
 
 const InputSchema = z.object({
   tutorId: z.string().uuid(),
@@ -74,11 +74,12 @@ Deno.serve(async (req) => {
   }
 
   const overrides = buildTutorOverrides(tutor as TutorConfig);
+  const dynamicVariables = buildTutorDynamicVariables(tutor as TutorConfig);
   const res = await tokenPromise;
   if (!res.ok) {
     console.error("[tutor-token] ElevenLabs token failed", res.status);
     return json({ error: "token_failed" }, 502);
   }
   const tokenBody = (await res.json()) as { token: string };
-  return json({ conversationToken: tokenBody.token, overrides, childId, tutorId: tutor.id });
+  return json({ conversationToken: tokenBody.token, overrides, dynamicVariables, childId, tutorId: tutor.id });
 });

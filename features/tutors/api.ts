@@ -8,7 +8,8 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import { hhKey, qk } from "@/lib/query-keys";
 import { mustList, RpcError } from "@/lib/rpc";
 import { supabase } from "@/lib/supabase";
-import type { TutorAgentOverrides, TutorLanguage, TutorPersonality } from "@/lib/tutors";
+import { cleanTutorText } from "@/lib/tutor-text";
+import type { TutorAgentOverrides, TutorDynamicVariables, TutorLanguage, TutorPersonality } from "@/lib/tutors";
 
 export interface TutorRow {
   id: string;
@@ -175,17 +176,20 @@ export function useSessionTranscript(hh: string, sessionId: string) {
         ...meta.data,
         tutorName: tutor.data?.name ?? "",
         childName: child.data?.display_name ?? "",
-        transcript: transcript.transcript,
+        transcript: transcript.transcript.map((m) => ({ ...m, content: cleanTutorText(m.content) })),
       };
     },
   });
 }
 
 export async function mintTutorToken(tutorId: string) {
-  return invokeFunction<{ conversationToken: string; overrides: TutorAgentOverrides; childId: string; tutorId: string }>(
-    "tutor-token",
-    { tutorId },
-  );
+  return invokeFunction<{
+    conversationToken: string;
+    overrides: TutorAgentOverrides;
+    dynamicVariables: TutorDynamicVariables;
+    childId: string;
+    tutorId: string;
+  }>("tutor-token", { tutorId });
 }
 
 export function tutorErrorMessage(reason: string): string {
